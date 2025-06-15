@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import heapq
 import os
 from collections import defaultdict, deque
@@ -122,6 +122,11 @@ def load_graph(graph_name):
         return jsonify({'message': f'Graph {graph_name} loaded successfully', 'locations': len(mountain_graph.locations)})
     else:
         return jsonify({'error': 'Graph file not found'}), 404
+
+@app.route('/images/<filename>')
+def serve_image(filename):
+    """Serve images from the images directory"""
+    return send_from_directory('images', filename)
 
 if __name__ == '__main__':
     mountain_graph.load_graph_data('graphs/G02.txt')
