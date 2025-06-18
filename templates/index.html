@@ -85,11 +85,30 @@
             color: white;
             border-radius: 3px;
             display: inline-block;
-            margin-right: 10px;
+            margin-right: 2px;
+            margin-left: 2px;
+        }
+        .arrow-container {
+            display: inline-block;
+            position: relative;
+            margin: 0 5px;
+            vertical-align: middle;
         }
         .arrow {
             color: #7f8c8d;
-            margin: 0 5px;
+            font-size: 20px;
+        }
+        .segment-time {
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #7f8c8d;
+            padding: 2px 6px;
+            border-radius: 2px;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
         }
         .time-result {
             font-size: 24px;
@@ -147,8 +166,16 @@
         
         <div class="image-panel">
             <h3 style="color: #2c3e50; margin-top: 0;">Trail Map</h3>
-            <img src="/images/G02_hiking.jpg" alt="G02 Hiking Trail Map" class="trail-map">
-            <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+            <div class="form-group">
+                <label for="graph-select">Select Graph:</label>
+                <select id="graph-select" onchange="changeGraph()">
+                    <option value="G02">G02 - 玉山群峰</option>
+                    <option value="G03">G03 - 望鄉山、郡大山、西巒大山</option>
+                    <option value="G04">G04 - 雪山主峰、大霸尖山</option>
+                </select>
+            </div>
+            <img id="trail-map-img" src="/images/G02_hiking.jpg" alt="G02 Hiking Trail Map" class="trail-map">
+            <p id="map-description" style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
                 G02 玉山群峰步程示意圖 - Interactive trail map showing hiking routes and time estimates
             </p>
         </div>
@@ -164,6 +191,10 @@
                 
                 const startSelect = document.getElementById('start');
                 const endSelect = document.getElementById('end');
+                
+                // Clear existing options except the default one
+                startSelect.innerHTML = '<option value="">Select starting location...</option>';
+                endSelect.innerHTML = '<option value="">Select destination...</option>';
                 
                 locations.forEach(location => {
                     startSelect.innerHTML += `<option value="${location}">${location}</option>`;
@@ -223,7 +254,11 @@
             data.path.forEach((location, index) => {
                 pathDiv.innerHTML += `<span class="path-item">${location}</span>`;
                 if (index < data.path.length - 1) {
-                    pathDiv.innerHTML += '<span class="arrow">→</span>';
+                    const segmentTime = data.segment_times_formatted[index];
+                    pathDiv.innerHTML += `<span class="arrow-container">
+                        <span class="segment-time">${segmentTime}</span>
+                        <span class="arrow">→</span>
+                    </span>`;
                 }
             });
             
@@ -240,6 +275,42 @@
         function hideResults() {
             document.getElementById('result').style.display = 'none';
             document.getElementById('error').style.display = 'none';
+        }
+
+        function changeGraph() {
+            const selectedGraph = document.getElementById('graph-select').value;
+            const img = document.getElementById('trail-map-img');
+            const description = document.getElementById('map-description');
+            
+            // Update image source and alt text
+            img.src = `/images/${selectedGraph}_hiking.jpg`;
+            img.alt = `${selectedGraph} Hiking Trail Map`;
+            
+            // Update description based on selected graph
+            const descriptions = {
+                'G02': 'G02 玉山群峰步程示意圖 - Interactive trail map showing hiking routes and time estimates',
+                'G03': 'G03 望鄉山、郡大山、西巒大山步程示意圖 - Trail map for Wangxiang Mountain, Junda Mountain, and Xiluan Mountain',
+                'G04': 'G04 雪山主峰、大霸尖山步程示意圖 - Trail map for Snow Mountain Main Peak and Dabajian Mountain'
+            };
+            
+            description.textContent = descriptions[selectedGraph] || 'Trail map showing hiking routes and time estimates';
+            
+            // Load the corresponding graph data
+            loadGraph(selectedGraph);
+        }
+
+        async function loadGraph(graphName) {
+            try {
+                const response = await fetch(`/api/load_graph/${graphName}`);
+                if (response.ok) {
+                    // Reload locations for the new graph
+                    await loadLocations();
+                } else {
+                    showError(`Failed to load graph ${graphName}`);
+                }
+            } catch (error) {
+                showError(`Error loading graph: ${error.message}`);
+            }
         }
 
         loadLocations();

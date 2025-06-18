@@ -44,7 +44,7 @@ class MountainGraph:
     def dijkstra(self, start, end):
         """Find shortest path using Dijkstra's algorithm"""
         if start not in self.locations or end not in self.locations:
-            return None, float('inf')
+            return None, float('inf'), []
         
         distances = {location: float('inf') for location in self.locations}
         distances[start] = 0
@@ -67,7 +67,19 @@ class MountainGraph:
                     current = previous[current]
                 path.append(start)
                 path.reverse()
-                return path, distances[end]
+                
+                # Calculate segment times
+                segment_times = []
+                for i in range(len(path) - 1):
+                    current_loc = path[i]
+                    next_loc = path[i + 1]
+                    # Find the time between these two locations
+                    for neighbor, weight in self.graph[current_loc]:
+                        if neighbor == next_loc:
+                            segment_times.append(weight)
+                            break
+                
+                return path, distances[end], segment_times
             
             for neighbor, weight in self.graph[current]:
                 distance = current_dist + weight
@@ -77,7 +89,7 @@ class MountainGraph:
                     previous[neighbor] = current
                     heapq.heappush(pq, (distance, neighbor))
         
-        return None, float('inf')
+        return None, float('inf'), []
 
 mountain_graph = MountainGraph()
 
@@ -100,7 +112,7 @@ def calculate_climbing_time():
     if not start or not end:
         return jsonify({'error': 'Start and end locations are required'}), 400
     
-    path, time = mountain_graph.dijkstra(start, end)
+    path, time, segment_times = mountain_graph.dijkstra(start, end)
     
     if path is None:
         return jsonify({'error': 'No path found between the locations'}), 404
@@ -108,7 +120,9 @@ def calculate_climbing_time():
     return jsonify({
         'path': path,
         'time': time,
-        'time_formatted': f"{time // 60}h {time % 60}m" if time < float('inf') else "No path"
+        'time_formatted': f"{time // 60}h {time % 60}m" if time < float('inf') else "No path",
+        'segment_times': segment_times,
+        'segment_times_formatted': [f"{t}m" for t in segment_times]
     })
 
 @app.route('/api/load_graph/<graph_name>')
@@ -127,6 +141,7 @@ def load_graph(graph_name):
 def serve_image(filename):
     """Serve images from the images directory"""
     return send_from_directory('images', filename)
+
 
 if __name__ == '__main__':
     mountain_graph.load_graph_data('graphs/G02.txt')
