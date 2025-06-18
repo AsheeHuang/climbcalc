@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 import heapq
 import os
 from collections import defaultdict, deque
+from itertools import permutations
 
 app = Flask(__name__)
 
@@ -90,6 +91,38 @@ class MountainGraph:
                     heapq.heappush(pq, (distance, neighbor))
         
         return None, float('inf'), []
+    
+    def calculate_multi_point_route(self, points):
+        """Calculate shortest path through multiple points in order"""
+        if len(points) < 2:
+            return None, 0, []
+        
+        # Validate all points exist
+        for point in points:
+            if point not in self.locations:
+                return None, float('inf'), []
+        
+        full_path = [points[0]]
+        total_time = 0
+        all_segment_times = []
+        
+        # Calculate path between each consecutive pair of points
+        for i in range(len(points) - 1):
+            start_point = points[i]
+            end_point = points[i + 1]
+            
+            path, time, segment_times = self.dijkstra(start_point, end_point)
+            
+            if path is None:
+                return None, float('inf'), []
+            
+            # Add path (excluding start point to avoid duplication)
+            full_path.extend(path[1:])
+            total_time += time
+            all_segment_times.extend(segment_times)
+        
+        return full_path, total_time, all_segment_times
+
 
 mountain_graph = MountainGraph()
 
@@ -104,21 +137,23 @@ def get_locations():
 
 @app.route('/api/calculate', methods=['POST'])
 def calculate_climbing_time():
-    """Calculate shortest climbing time between two locations"""
+    """Calculate shortest climbing time through multiple points"""
     data = request.get_json()
-    start = data.get('start')
-    end = data.get('end')
     
-    if not start or not end:
-        return jsonify({'error': 'Start and end locations are required'}), 400
-    
-    path, time, segment_times = mountain_graph.dijkstra(start, end)
+    # Support both old format (start/end) and new format (points list)
+    if 'points' in data:
+        points = data.get('points')
+        if not points or len(points) < 2:
+            return jsonify({'error': 'At least 2 points are required'}), 400
+
+    path, time, segment_times = mountain_graph.calculate_multi_point_route(points)
     
     if path is None:
         return jsonify({'error': 'No path found between the locations'}), 404
     
     return jsonify({
         'path': path,
+        'points': points,
         'time': time,
         'time_formatted': f"{time // 60}h {time % 60}m" if time < float('inf') else "No path",
         'segment_times': segment_times,

@@ -58,6 +58,42 @@
             border-radius: 5px;
             font-size: 16px;
         }
+        .point-input {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+        .point-select {
+            flex: 1;
+        }
+        .remove-point {
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .remove-point:hover {
+            background-color: #c0392b;
+        }
+        .add-point {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .add-point:hover {
+            background-color: #229954;
+        }
         button {
             background-color: #3498db;
             color: white;
@@ -137,17 +173,22 @@
             <h1>🏔️ Mountain Climbing Time Calculator</h1>
         
         <div class="form-group">
-            <label for="start">Starting Location:</label>
-            <select id="start">
-                <option value="">Select starting location...</option>
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label for="end">Destination:</label>
-            <select id="end">
-                <option value="">Select destination...</option>
-            </select>
+            <label for="points">Route Points (in order):</label>
+            <div id="points-container">
+                <div class="point-input">
+                    <select class="point-select">
+                        <option value="">Select starting location...</option>
+                    </select>
+                    <button type="button" onclick="removePoint(this)" class="remove-point" style="display: none;">×</button>
+                </div>
+                <div class="point-input">
+                    <select class="point-select">
+                        <option value="">Select destination...</option>
+                    </select>
+                    <button type="button" onclick="removePoint(this)" class="remove-point" style="display: none;">×</button>
+                </div>
+            </div>
+            <button type="button" onclick="addPoint()" class="add-point">+ Add Point</button>
         </div>
         
         <button onclick="calculatePath()">Calculate Climbing Time</button>
@@ -189,34 +230,88 @@
                 const response = await fetch('/api/locations');
                 locations = await response.json();
                 
-                const startSelect = document.getElementById('start');
-                const endSelect = document.getElementById('end');
-                
-                // Clear existing options except the default one
-                startSelect.innerHTML = '<option value="">Select starting location...</option>';
-                endSelect.innerHTML = '<option value="">Select destination...</option>';
-                
-                locations.forEach(location => {
-                    startSelect.innerHTML += `<option value="${location}">${location}</option>`;
-                    endSelect.innerHTML += `<option value="${location}">${location}</option>`;
-                });
+                // Update all point selects
+                updateAllPointSelects();
             } catch (error) {
                 showError('Failed to load locations');
             }
         }
 
-        async function calculatePath() {
-            const start = document.getElementById('start').value;
-            const end = document.getElementById('end').value;
+        function updateAllPointSelects() {
+            const pointSelects = document.querySelectorAll('.point-select');
+            pointSelects.forEach((select, index) => {
+                const currentValue = select.value;
+                const placeholder = index === 0 ? 'Select starting location...' : 
+                                  index === pointSelects.length - 1 ? 'Select destination...' : 
+                                  'Select waypoint...';
+                
+                select.innerHTML = `<option value="">${placeholder}</option>`;
+                locations.forEach(location => {
+                    select.innerHTML += `<option value="${location}">${location}</option>`;
+                });
+                
+                // Restore previous value if it exists
+                if (currentValue) {
+                    select.value = currentValue;
+                }
+            });
+        }
+
+        function addPoint() {
+            const container = document.getElementById('points-container');
+            const pointInputs = container.querySelectorAll('.point-input');
             
-            if (!start || !end) {
-                showError('Please select both starting location and destination');
-                return;
+            const newPointDiv = document.createElement('div');
+            newPointDiv.className = 'point-input';
+            newPointDiv.innerHTML = `
+                <select class="point-select">
+                    <option value="">Select waypoint...</option>
+                </select>
+                <button type="button" onclick="removePoint(this)" class="remove-point">×</button>
+            `;
+            
+            // Insert before the last point (destination)
+            container.insertBefore(newPointDiv, pointInputs[pointInputs.length - 1]);
+            
+            // Update all selects and show remove buttons
+            updateAllPointSelects();
+            updateRemoveButtons();
+        }
+
+        function removePoint(button) {
+            const pointInput = button.parentElement;
+            pointInput.remove();
+            updateRemoveButtons();
+        }
+
+        function updateRemoveButtons() {
+            const pointInputs = document.querySelectorAll('.point-input');
+            pointInputs.forEach((input, index) => {
+                const removeButton = input.querySelector('.remove-point');
+                // Show remove button only if there are more than 2 points
+                removeButton.style.display = pointInputs.length > 2 ? 'block' : 'none';
+            });
+        }
+
+        async function calculatePath() {
+            // Collect all selected points
+            const pointSelects = document.querySelectorAll('.point-select');
+            const points = [];
+            
+            for (let select of pointSelects) {
+                if (!select.value) {
+                    showError('Please select all route points');
+                    return;
+                }
+                points.push(select.value);
             }
             
-            if (start === end) {
-                showError('Starting location and destination cannot be the same');
-                return;
+            // Check for duplicate consecutive points
+            for (let i = 0; i < points.length - 1; i++) {
+                if (points[i] === points[i + 1]) {
+                    showError('Consecutive points cannot be the same');
+                    return;
+                }
             }
             
             hideResults();
@@ -228,7 +323,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ start, end })
+                    body: JSON.stringify({ points })
                 });
                 
                 const data = await response.json();
