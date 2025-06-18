@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mountain Climbing Time Calculator</title>
+    <title>上河時間計算機</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -51,9 +51,9 @@
             font-weight: bold;
             color: #34495e;
         }
-        select, button {
-            width: 100%;
-            padding: 10px;
+        select, button, input {
+            width: 98%;
+            padding: 10px 0px 10px 10px;
             border: 1px solid #ddd;
             border-radius: 5px;
             font-size: 16px;
@@ -63,9 +63,70 @@
             align-items: center;
             margin-bottom: 10px;
             gap: 10px;
+            cursor: move;
+            transition: background-color 0.2s ease;
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid transparent;
+        }
+        .point-input:hover {
+            background-color: #f8f9fa;
+        }
+        .point-input.dragging {
+            opacity: 0.5;
+            transform: rotate(5deg);
+        }
+        .point-input.drag-over {
+            border-color: #3498db;
+            background-color: #e3f2fd;
+        }
+        .drag-handle {
+            cursor: move;
+            padding: 5px;
+            margin-right: 5px;
+            color: #7f8c8d;
+            font-size: 16px;
+            user-select: none;
+        }
+        .drag-handle:hover {
+            color: #3498db;
         }
         .point-select {
             flex: 1;
+            position: relative;
+        }
+        .search-input {
+            flex: 1;
+        }
+        .autocomplete-container {
+            position: relative;
+            flex: 1;
+        }
+        .autocomplete-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .autocomplete-item:hover,
+        .autocomplete-item.highlighted {
+            background-color: #f8f9fa;
+        }
+        .autocomplete-item:last-child {
+            border-bottom: none;
         }
         .remove-point {
             width: 30px;
@@ -170,31 +231,35 @@
 <body>
     <div class="main-layout">
         <div class="container">
-            <h1>🏔️ Mountain Climbing Time Calculator</h1>
+            <h1>上河時間計算機</h1>
         
         <div class="form-group">
-            <label for="points">Route Points (in order):</label>
+            <label for="points"> 路線:</label>
             <div id="points-container">
-                <div class="point-input">
-                    <select class="point-select">
-                        <option value="">Select starting location...</option>
-                    </select>
+                <div class="point-input" draggable="true">
+                    <div class="drag-handle">⋮⋮</div>
+                    <div class="autocomplete-container">
+                        <input type="text" class="search-input" placeholder="起點" data-selected="">
+                        <div class="autocomplete-results"></div>
+                    </div>
                     <button type="button" onclick="removePoint(this)" class="remove-point" style="display: none;">×</button>
                 </div>
-                <div class="point-input">
-                    <select class="point-select">
-                        <option value="">Select destination...</option>
-                    </select>
+                <div class="point-input" draggable="true">
+                    <div class="drag-handle">⋮⋮</div>
+                    <div class="autocomplete-container">
+                        <input type="text" class="search-input" placeholder="終點" data-selected="">
+                        <div class="autocomplete-results"></div>
+                    </div>
                     <button type="button" onclick="removePoint(this)" class="remove-point" style="display: none;">×</button>
                 </div>
             </div>
-            <button type="button" onclick="addPoint()" class="add-point">+ Add Point</button>
+            <button type="button" onclick="addPoint()" class="add-point">+ 新增中繼點</button>
         </div>
         
-        <button onclick="calculatePath()">Calculate Climbing Time</button>
+        <button onclick="calculatePath()">開始計算</button>
         
         <div id="loading" class="loading" style="display: none;">
-            Calculating optimal path...
+            計算中...
         </div>
         
         <div id="result" class="result">
@@ -206,18 +271,23 @@
         </div>
         
         <div class="image-panel">
-            <h3 style="color: #2c3e50; margin-top: 0;">Trail Map</h3>
+            <h3 style="color: #2c3e50; margin-top: 0;">路線圖</h3>
             <div class="form-group">
-                <label for="graph-select">Select Graph:</label>
+                <label for="graph-select">選擇地圖:</label>
                 <select id="graph-select" onchange="changeGraph()">
                     <option value="G02">G02 - 玉山群峰</option>
-                    <option value="G03">G03 - 望鄉山、郡大山、西巒大山</option>
-                    <option value="G04">G04 - 雪山主峰、大霸尖山</option>
+                    <option value="G03">G03 - 郡大山/西巒大山步程示意圖</option>
+                    <option value="G04">G04 - 大霸/聖稜/武陵四秀步程示意圖</option>
+                    <option value="G05">G05 - 雪山西南稜步程示意圖</option>
+                    <option value="G06">G06 - 白姑大山步程示意圖</option>
+                    <option value="G07">G07 - 北一段步程示意圖</option>
+                    <option value="G08">G08 - 畢祿羊頭/北二段步程示意圖</option>
+                    <option value="G09">G09 - 合歡群峰/奇萊主北/屏風山步程示意圖</option>
                 </select>
             </div>
             <img id="trail-map-img" src="/images/G02_hiking.jpg" alt="G02 Hiking Trail Map" class="trail-map">
             <p id="map-description" style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
-                G02 玉山群峰步程示意圖 - Interactive trail map showing hiking routes and time estimates
+                G02 玉山群峰步程示意圖
             </p>
         </div>
     </div>
@@ -230,31 +300,147 @@
                 const response = await fetch('/api/locations');
                 locations = await response.json();
                 
-                // Update all point selects
-                updateAllPointSelects();
+                // Setup search inputs
+                setupSearchInputs();
             } catch (error) {
                 showError('Failed to load locations');
             }
         }
 
-        function updateAllPointSelects() {
-            const pointSelects = document.querySelectorAll('.point-select');
-            pointSelects.forEach((select, index) => {
-                const currentValue = select.value;
-                const placeholder = index === 0 ? 'Select starting location...' : 
-                                  index === pointSelects.length - 1 ? 'Select destination...' : 
-                                  'Select waypoint...';
+        function setupSearchInputs() {
+            const searchInputs = document.querySelectorAll('.search-input');
+            searchInputs.forEach((input, index) => {
+                const placeholder = index === 0 ? '起點' : 
+                                  index === searchInputs.length - 1 ? '終點' : 
+                                  '中繼點';
+                input.placeholder = placeholder;
                 
-                select.innerHTML = `<option value="">${placeholder}</option>`;
-                locations.forEach(location => {
-                    select.innerHTML += `<option value="${location}">${location}</option>`;
+                // Add event listeners
+                input.addEventListener('input', function() {
+                    handleSearch(this);
                 });
                 
-                // Restore previous value if it exists
-                if (currentValue) {
-                    select.value = currentValue;
-                }
+                input.addEventListener('focus', function() {
+                    handleSearch(this);
+                });
+                
+                input.addEventListener('blur', function() {
+                    // Delay hiding to allow clicking on results
+                    setTimeout(() => {
+                        hideAutocomplete(this);
+                    }, 150);
+                });
+                
+                input.addEventListener('keydown', function(e) {
+                    handleKeyNavigation(e, this);
+                });
             });
+        }
+
+        function handleSearch(input) {
+            const query = input.value.toLowerCase();
+            const resultsContainer = input.nextElementSibling;
+            
+            if (query.length === 0) {
+                // Show all locations when empty
+                showAllResults(resultsContainer, input);
+            } else {
+                // Filter locations based on query
+                const filteredLocations = locations.filter(location => 
+                    location.toLowerCase().includes(query)
+                );
+                showFilteredResults(resultsContainer, filteredLocations, input);
+            }
+        }
+
+        function showAllResults(resultsContainer, input) {
+            resultsContainer.innerHTML = '';
+            locations.forEach(location => {
+                const item = createResultItem(location, input);
+                resultsContainer.appendChild(item);
+            });
+            resultsContainer.style.display = 'block';
+        }
+
+        function showFilteredResults(resultsContainer, filteredLocations, input) {
+            resultsContainer.innerHTML = '';
+            
+            if (filteredLocations.length === 0) {
+                const noResults = document.createElement('div');
+                noResults.className = 'autocomplete-item';
+                noResults.textContent = 'No matching locations found';
+                noResults.style.fontStyle = 'italic';
+                noResults.style.color = '#999';
+                resultsContainer.appendChild(noResults);
+            } else {
+                filteredLocations.forEach(location => {
+                    const item = createResultItem(location, input);
+                    resultsContainer.appendChild(item);
+                });
+            }
+            resultsContainer.style.display = 'block';
+        }
+
+        function createResultItem(location, input) {
+            const item = document.createElement('div');
+            item.className = 'autocomplete-item';
+            item.textContent = location;
+            item.addEventListener('click', function() {
+                selectLocation(input, location);
+            });
+            return item;
+        }
+
+        function selectLocation(input, location) {
+            input.value = location;
+            input.setAttribute('data-selected', location);
+            hideAutocomplete(input);
+        }
+
+        function hideAutocomplete(input) {
+            const resultsContainer = input.nextElementSibling;
+            resultsContainer.style.display = 'none';
+        }
+
+        function handleKeyNavigation(e, input) {
+            const resultsContainer = input.nextElementSibling;
+            const items = resultsContainer.querySelectorAll('.autocomplete-item');
+            let currentHighlighted = resultsContainer.querySelector('.highlighted');
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (!currentHighlighted) {
+                    items[0]?.classList.add('highlighted');
+                } else {
+                    currentHighlighted.classList.remove('highlighted');
+                    const nextItem = currentHighlighted.nextElementSibling;
+                    if (nextItem) {
+                        nextItem.classList.add('highlighted');
+                    } else {
+                        items[0]?.classList.add('highlighted');
+                    }
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!currentHighlighted) {
+                    items[items.length - 1]?.classList.add('highlighted');
+                } else {
+                    currentHighlighted.classList.remove('highlighted');
+                    const prevItem = currentHighlighted.previousElementSibling;
+                    if (prevItem) {
+                        prevItem.classList.add('highlighted');
+                    } else {
+                        items[items.length - 1]?.classList.add('highlighted');
+                    }
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentHighlighted) {
+                    selectLocation(input, currentHighlighted.textContent);
+                }
+            } else if (e.key === 'Escape') {
+                hideAutocomplete(input);
+            }
         }
 
         function addPoint() {
@@ -263,18 +449,22 @@
             
             const newPointDiv = document.createElement('div');
             newPointDiv.className = 'point-input';
+            newPointDiv.draggable = true;
             newPointDiv.innerHTML = `
-                <select class="point-select">
-                    <option value="">Select waypoint...</option>
-                </select>
+                <div class="drag-handle">⋮⋮</div>
+                <div class="autocomplete-container">
+                    <input type="text" class="search-input" placeholder="Type to search waypoint..." data-selected="">
+                    <div class="autocomplete-results"></div>
+                </div>
                 <button type="button" onclick="removePoint(this)" class="remove-point">×</button>
             `;
             
             // Insert before the last point (destination)
             container.insertBefore(newPointDiv, pointInputs[pointInputs.length - 1]);
             
-            // Update all selects and show remove buttons
-            updateAllPointSelects();
+            // Setup the new search input and drag functionality
+            setupSearchInputs();
+            setupDragAndDrop();
             updateRemoveButtons();
         }
 
@@ -295,15 +485,16 @@
 
         async function calculatePath() {
             // Collect all selected points
-            const pointSelects = document.querySelectorAll('.point-select');
+            const searchInputs = document.querySelectorAll('.search-input');
             const points = [];
             
-            for (let select of pointSelects) {
-                if (!select.value) {
+            for (let input of searchInputs) {
+                const selectedValue = input.getAttribute('data-selected');
+                if (!selectedValue || selectedValue.trim() === '') {
                     showError('Please select all route points');
                     return;
                 }
-                points.push(select.value);
+                points.push(selectedValue);
             }
             
             // Check for duplicate consecutive points
@@ -341,10 +532,10 @@
         }
 
         function showResult(data) {
-            document.getElementById('time').textContent = `Total Time: ${data.time_formatted}`;
+            document.getElementById('time').textContent = `總時間: ${data.time_formatted}`;
             
             const pathDiv = document.getElementById('path');
-            pathDiv.innerHTML = '<strong>Route:</strong><br>';
+            pathDiv.innerHTML = '<strong>路線:</strong><br>';
             
             data.path.forEach((location, index) => {
                 pathDiv.innerHTML += `<span class="path-item">${location}</span>`;
@@ -383,9 +574,14 @@
             
             // Update description based on selected graph
             const descriptions = {
-                'G02': 'G02 玉山群峰步程示意圖 - Interactive trail map showing hiking routes and time estimates',
-                'G03': 'G03 望鄉山、郡大山、西巒大山步程示意圖 - Trail map for Wangxiang Mountain, Junda Mountain, and Xiluan Mountain',
-                'G04': 'G04 雪山主峰、大霸尖山步程示意圖 - Trail map for Snow Mountain Main Peak and Dabajian Mountain'
+                'G02': 'G02 玉山群峰步程示意圖',
+                'G03': 'G03 郡大山/西巒大山步程示意圖',
+                'G04': 'G04 大霸/聖稜/武陵四秀步程示意圖',
+                'G05': 'G05 雪山西南稜步程示意圖',
+                'G06': 'G06 白姑大山步程示意圖',
+                'G07': 'G07 北一段步程示意圖',
+                'G08': 'G08 畢祿羊頭/北二段步程示意圖',
+                'G09': 'G09 合歡群峰/奇萊主北/屏風山步程示意圖'
             };
             
             description.textContent = descriptions[selectedGraph] || 'Trail map showing hiking routes and time estimates';
@@ -400,6 +596,14 @@
                 if (response.ok) {
                     // Reload locations for the new graph
                     await loadLocations();
+                    
+                    // Clear existing inputs
+                    const searchInputs = document.querySelectorAll('.search-input');
+                    searchInputs.forEach(input => {
+                        input.value = '';
+                        input.setAttribute('data-selected', '');
+                        hideAutocomplete(input);
+                    });
                 } else {
                     showError(`Failed to load graph ${graphName}`);
                 }
@@ -408,7 +612,100 @@
             }
         }
 
+        function setupDragAndDrop() {
+            const pointInputs = document.querySelectorAll('.point-input');
+            
+            pointInputs.forEach(pointInput => {
+                // Remove existing event listeners to avoid duplicates
+                pointInput.removeEventListener('dragstart', handleDragStart);
+                pointInput.removeEventListener('dragend', handleDragEnd);
+                pointInput.removeEventListener('dragover', handleDragOver);
+                pointInput.removeEventListener('dragenter', handleDragEnter);
+                pointInput.removeEventListener('dragleave', handleDragLeave);
+                pointInput.removeEventListener('drop', handleDrop);
+                
+                // Add event listeners
+                pointInput.addEventListener('dragstart', handleDragStart);
+                pointInput.addEventListener('dragend', handleDragEnd);
+                pointInput.addEventListener('dragover', handleDragOver);
+                pointInput.addEventListener('dragenter', handleDragEnter);
+                pointInput.addEventListener('dragleave', handleDragLeave);
+                pointInput.addEventListener('drop', handleDrop);
+            });
+        }
+
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            
+            // Clean up drag-over styling from all elements
+            const allPoints = document.querySelectorAll('.point-input');
+            allPoints.forEach(point => {
+                point.classList.remove('drag-over');
+            });
+        }
+
+        function handleDragEnter(e) {
+            if (this !== draggedElement) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            // Only remove highlight if we're leaving the element entirely
+            if (!this.contains(e.relatedTarget)) {
+                this.classList.remove('drag-over');
+            }
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            if (draggedElement !== this) {
+                const container = document.getElementById('points-container');
+                const allPoints = Array.from(container.querySelectorAll('.point-input'));
+                const draggedIndex = allPoints.indexOf(draggedElement);
+                const targetIndex = allPoints.indexOf(this);
+                
+                // Reorder the elements
+                if (draggedIndex < targetIndex) {
+                    // Moving down
+                    container.insertBefore(draggedElement, this.nextSibling);
+                } else {
+                    // Moving up
+                    container.insertBefore(draggedElement, this);
+                }
+                
+                // Re-setup event listeners after reordering
+                setupSearchInputs();
+                setupDragAndDrop();
+            }
+            
+            this.classList.remove('drag-over');
+            return false;
+        }
+
         loadLocations();
+        setupDragAndDrop();
     </script>
 </body>
 </html>

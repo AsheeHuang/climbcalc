@@ -2,6 +2,8 @@
 
 A Flask-based web application that calculates optimal climbing routes and times between mountain locations using Dijkstra's shortest path algorithm. Designed specifically for Taiwan mountain climbing routes.
 
+![Demo Screenshot](images/demo.png)
+
 ## Features
 
 - **Route Optimization**: Find the shortest path between mountain locations
