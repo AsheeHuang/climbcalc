@@ -89,3 +89,7 @@ climbcalc/
 3. Make your changes
 4. Run tests to ensure everything works
 5. Submit a pull request
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/asheehuang)
+  
+ 
